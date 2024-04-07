@@ -50,7 +50,7 @@ spec:
                 secretKeyRef:
                   name: {{ include "alertmanager-dingtalk-hook.fullname" . }}
                   key: secret_pro
-            {{ if not .Values.secret.dingtalkPre.enable }}
+            {{- if .Values.secret.dingtalkPre.enable }}
             - name: ROBOT_TOKEN_PRE
               valueFrom:
                 secretKeyRef:
