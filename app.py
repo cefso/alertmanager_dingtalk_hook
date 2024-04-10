@@ -38,7 +38,7 @@ def send_alert(env, data):
     - 无
     """
     # 根据环境获取token和secret
-    token, secret = get_token_and_secret(env)
+    # token, secret = get_token_and_secret(env)
     # 根据不同的环境覆盖token和secret
     if env == 'pre':
         token = os.getenv('ROBOT_TOKEN_PRE')
@@ -50,6 +50,13 @@ def send_alert(env, data):
         # 如果环境不是预发或生产，则清空token和secret
         token = ''
         secret = ''
+
+    # 获取external url
+    if os.getenv('EXTERNAL_URL'):
+        external_url = os.getenv('EXTERNAL_URL')
+    else:
+        external_url = ''
+
     # 检查token和secret是否设置
     if not token:
         app.logger.error('you must set ROBOT_TOKEN env')
@@ -79,7 +86,7 @@ def send_alert(env, data):
     else:
         # 构造报警通知的markdown格式内容
         title = '**[%s]** 有 **%d** 条新的报警' % (alert_name, len(alerts))
-        external_url = 'http://vmalert.fastfish.com'
+
         alert_list = ''
         if len(alerts) <= 5:
             for i in range(len(alerts)):
@@ -91,8 +98,7 @@ def send_alert(env, data):
             "msgtype": "markdown",
             "markdown": {
                 "title": title,
-                "text": "{0}\n![](https://teamo-md.oss-cn-shanghai.aliyuncs.com/pod.png)\n{1}\n[点击查看完整信息]({2})\n".format(
-                    title, alert_list, external_url)
+                "text": f"{title}\n![](https://teamo-md.oss-cn-shanghai.aliyuncs.com/pod.png)\n{alert_list}\n[点击查看完整信息]({external_url})"
             }
         }
 
@@ -132,7 +138,6 @@ def _mark_item(alert):
     # 构造markdown格式的报警信息
     annotations = f"> 总结: {summary}\n\n> 描述: {description}"
 
-    mark_item = ""
     if 'job' in labels:
         mark_item = f"\n> job: {labels['job']}\n\n{annotations}\n---\n"
     else:

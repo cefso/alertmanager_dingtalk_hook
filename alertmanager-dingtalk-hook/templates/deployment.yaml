@@ -40,6 +40,11 @@ spec:
           env:
             - name: LOG_LEVEL
               value: debug
+            - name: EXTERNAL_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alertmanager-dingtalk-hook.fullname" . }}
+                  key: external_url
             - name: ROBOT_TOKEN_PRO
               valueFrom:
                 secretKeyRef:
