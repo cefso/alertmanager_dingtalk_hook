@@ -55,18 +55,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "alertmanager-dingtalk-hook.fullname" . }}
                   key: secret_pro
-            {{- if .Values.secret.dingtalkPre.enable }}
-            - name: ROBOT_TOKEN_PRE
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "alertmanager-dingtalk-hook.fullname" . }}
-                  key: token_pre
-            - name: ROBOT_SECRET_PRE
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "alertmanager-dingtalk-hook.fullname" . }}
-                  key: secret_pre
-            {{ end }}
+            {{- if .Values.moreEnvVars.enable}}
+            {{- range .Values.moreEnvVars.envVars }}
+            - name: {{ .name }}
+              value: {{ .value }}
+                {{- end }}
+            {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:

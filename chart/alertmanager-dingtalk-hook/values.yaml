@@ -21,8 +21,8 @@ podSecurityContext: { }
 # fsGroup: 2000
 
 securityContext: { }
-  # capabilities:
-  #   drop:
+# capabilities:
+#   drop:
 #   - ALL
 # readOnlyRootFilesystem: true
 # runAsNonRoot: true
@@ -32,11 +32,15 @@ secret:
   dingtalkPro:
     token: ""
     secret: ""
-  dingtalkPre:
-    enable: false
-    token: ""
-    secret: ""
   externalUrl: ""
+
+moreEnvVars:
+  enable: false
+  envVars:
+    - name: VAR1
+      value: value1
+    - name: VAR2
+      value: value2
 
 
 service:
@@ -48,8 +52,8 @@ resources: { }
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
+# limits:
+#   cpu: 100m
 #   memory: 128Mi
 # requests:
 #   cpu: 100m

@@ -13,56 +13,42 @@ from flask import request
 
 app = Flask(__name__)
 
-# Set up logging
-logging.basicConfig(
-    level=logging.DEBUG if os.getenv('LOG_LEVEL') == 'debug' else logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s')
+# 设置日志记录级别
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+logging.basicConfig(level=LOG_LEVEL,
+                    format='%(asctime)s %(levelname)s %(message)s')
 
-# Environment variables
-ROBOT_TOKEN_PRE = os.getenv('ROBOT_TOKEN_PRE')
-ROBOT_SECRET_PRE = os.getenv('ROBOT_SECRET_PRE')
-ROBOT_TOKEN_PRO = os.getenv('ROBOT_TOKEN_PRO')
-ROBOT_SECRET_PRO = os.getenv('ROBOT_SECRET_PRO')
+# 环境变量配置
+ROBOT_TOKENS = {'pre': os.getenv('ROBOT_TOKEN_PRE'), 'pro': os.getenv('ROBOT_TOKEN_PRO')}
+ROBOT_SECRETS = {'pre': os.getenv('ROBOT_SECRET_PRE'), 'pro': os.getenv('ROBOT_SECRET_PRO')}
+EXTERNAL_URL = os.getenv('EXTERNAL_URL', '')
+
+# 错误消息和常量定义
+ERROR_TOKEN_NOT_SET = 'you must set ROBOT_TOKEN env'
+ERROR_SECRET_NOT_SET = 'you must set ROBOT_SECRET env'
 
 
 # Helper functions
+
 def send_alert(env, data):
     """
     发送报警通知到钉钉
 
     参数:
-    - env: 报警环境，用于确定使用哪个环境的token和secret（如'pre'表示预发环境，'pro'表示生产环境）
-    - data: 包含报警状态和详细信息的数据字典
+    - env: 报警环境，用于选择相应的机器人令牌和密钥。
+    - data: 包含报警信息的字典。
 
-    返回值:
-    - 无
+    无返回值。
     """
     # 根据环境获取token和secret
-    # token, secret = get_token_and_secret(env)
-    # 根据不同的环境覆盖token和secret
-    if env == 'pre':
-        token = os.getenv('ROBOT_TOKEN_PRE')
-        secret = os.getenv('ROBOT_SECRET_PRE')
-    elif env == 'pro':
-        token = os.getenv('ROBOT_TOKEN_PRO')
-        secret = os.getenv('ROBOT_SECRET_PRO')
-    else:
-        # 如果环境不是预发或生产，则清空token和secret
-        token = ''
-        secret = ''
+    token = ROBOT_TOKENS.get(env, '')
+    secret = ROBOT_SECRETS.get(env, '')
 
-    # 获取external url
-    if os.getenv('EXTERNAL_URL'):
-        external_url = os.getenv('EXTERNAL_URL')
-    else:
-        external_url = ''
-
-    # 检查token和secret是否设置
     if not token:
-        app.logger.error('you must set ROBOT_TOKEN env')
+        app.logger.error(ERROR_TOKEN_NOT_SET)
         return
     if not secret:
-        app.logger.error('you must set ROBOT_SECRET env')
+        app.logger.error(ERROR_SECRET_NOT_SET)
         return
 
     # 构造钉钉消息的URL
@@ -98,7 +84,7 @@ def send_alert(env, data):
             "msgtype": "markdown",
             "markdown": {
                 "title": title,
-                "text": f"{title}\n![](https://teamo-md.oss-cn-shanghai.aliyuncs.com/pod.png)\n{alert_list}\n[点击查看完整信息]({external_url})"
+                "text": f"{title}\n![](https://teamo-md.oss-cn-shanghai.aliyuncs.com/pod.png)\n{alert_list}\n[点击查看完整信息]({EXTERNAL_URL})"
             }
         }
 
@@ -115,10 +101,10 @@ def _mark_item(alert):
     格式化单个报警项的信息为markdown格式
 
     参数:
-    - alert: 单个报警的数据字典
+    - alert: 包含单个报警信息的字典。
 
     返回值:
-    - 格式化后的markdown字符串
+    - 格式化后的markdown字符串。
     """
     try:
         labels = alert.get('labels', {})
@@ -129,10 +115,10 @@ def _mark_item(alert):
         if not isinstance(summary, str) or not isinstance(description, str):
             raise ValueError("summary和description必须是字符串类型")
     except KeyError as e:
-        print(f"缺少必要的键: {e}")
+        app.logger.error(f"缺少必要的键: {e}")
         return ""
     except ValueError as e:
-        print(e)
+        app.logger.error(e)
         return ""
 
     # 构造markdown格式的报警信息
@@ -146,27 +132,27 @@ def _mark_item(alert):
     return mark_item
 
 
-def get_token_and_secret(env):
-    """
-    根据指定的环境获取相应的机器人令牌和密钥。
-
-    参数:
-    - env: 字符串，指定环境，可以是'pre'（预发布环境）或'pro'（生产环境）。
-
-    返回值:
-    - tuple: 包含机器人令牌和密钥的元组。若env为'pre'，返回ROBOT_TOKEN_PRE和ROBOT_SECRET_PRE；
-             若env为'pro'，返回ROBOT_TOKEN_PRO和ROBOT_SECRET_PRO。
-
-    异常:
-    - 如果指定的环境无效，会引发一个400错误，错误信息为"Invalid environment specified"。
-    """
-    if env == 'pre':
-        return ROBOT_TOKEN_PRE, ROBOT_SECRET_PRE
-    elif env == 'pro':
-        return ROBOT_TOKEN_PRO, ROBOT_SECRET_PRO
-    else:
-        # 对于无效的环境参数，触发HTTP 400错误
-        abort(400, "Invalid environment specified")
+# def get_token_and_secret(env):
+#     """
+#     根据指定的环境获取相应的机器人令牌和密钥。
+#
+#     参数:
+#     - env: 字符串，指定环境，可以是'pre'（预发布环境）或'pro'（生产环境）。
+#
+#     返回值:
+#     - tuple: 包含机器人令牌和密钥的元组。若env为'pre'，返回ROBOT_TOKEN_PRE和ROBOT_SECRET_PRE；
+#              若env为'pro'，返回ROBOT_TOKEN_PRO和ROBOT_SECRET_PRO。
+#
+#     异常:
+#     - 如果指定的环境无效，会引发一个400错误，错误信息为"Invalid environment specified"。
+#     """
+#     if env == 'pre':
+#         return ROBOT_TOKEN_PRE, ROBOT_SECRET_PRE
+#     elif env == 'pro':
+#         return ROBOT_TOKEN_PRO, ROBOT_SECRET_PRO
+#     else:
+#         # 对于无效的环境参数，触发HTTP 400错误
+#         abort(400, "Invalid environment specified")
 
 
 def make_sign(timestamp, secret):
@@ -203,43 +189,33 @@ def make_sign(timestamp, secret):
 @app.route('/', methods=['GET'])
 def hello():
     """
-    处理根路径的GET请求，返回欢迎信息。
-
-    参数:
-    无
-
-    返回值:
-    str: 返回一个欢迎使用的字符串信息。
+    首页路由，返回欢迎信息。
     """
-    if request.method == 'GET':  # 判断请求方法是否为GET
-        return 'weclome to use prometheus alertmanager dingtalk webhook server!'
+    return 'weclome to use prometheus alertmanager dingtalk webhook server!'
 
 
-@app.route('/<env>', methods=['GET', 'POST'])
+@app.route('/hook/<env>', methods=['GET', 'POST'])
 def send_to_env(env):
     """
-    根据请求的方法，将数据发送到指定的环境。
+    处理来自Prometheus Alertmanager的报警通知。
 
-    :param env: 指定的目标环境，URL路径参数。
-    :return: 根据请求方法的不同，返回不同的响应。POST请求成功返回'Success'和状态码200，
-             GET请求返回欢迎信息和状态码200。
+    参数:
+    - env: 报警环境，用于选择相应的机器人令牌和密钥。
+
+    返回值:
+    - 根据请求方法返回不同的响应，GET请求返回欢迎信息，POST请求处理报警通知并返回成功信息。
     """
     if request.method == 'POST':
-        # 尝试获取并解析POST请求的数据
-        post_data = request.get_data()
         try:
+            post_data = request.get_data()
             data = json.loads(post_data)
         except json.JSONDecodeError:
-            # 如果JSON解析失败，返回400错误
             abort(400, "Invalid JSON payload")
 
-        # 记录POST数据的调试信息
         app.logger.debug(post_data)
-        # 发送警报到指定环境
         send_alert(env, data)
         return 'Success', 200
     else:
-        # 对于GET请求，返回欢迎信息
         return f'Welcome to use Prometheus Alertmanager Dingtalk webhook server! This URL is for {env.upper()} environment.', 200
 
 
