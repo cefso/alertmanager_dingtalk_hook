@@ -15,12 +15,11 @@ app = Flask(__name__)
 
 # 设置日志记录级别
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
-logging.basicConfig(level=LOG_LEVEL,
-                    format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(levelname)s %(message)s')
 
 # 环境变量配置
-ROBOT_TOKENS = {'pre': os.getenv('ROBOT_TOKEN_PRE'), 'pro': os.getenv('ROBOT_TOKEN_PRO')}
-ROBOT_SECRETS = {'pre': os.getenv('ROBOT_SECRET_PRE'), 'pro': os.getenv('ROBOT_SECRET_PRO')}
+# ROBOT_TOKENS = {'pro': os.getenv('ROBOT_TOKEN_PRO')}
+# ROBOT_SECRETS = {'pro': os.getenv('ROBOT_SECRET_PRO')}
 EXTERNAL_URL = os.getenv('EXTERNAL_URL', '')
 
 # 错误消息和常量定义
@@ -41,8 +40,10 @@ def send_alert(env, data):
     无返回值。
     """
     # 根据环境获取token和secret
-    token = ROBOT_TOKENS.get(env, '')
-    secret = ROBOT_SECRETS.get(env, '')
+    # token = ROBOT_TOKENS.get(env, '')
+    # secret = ROBOT_SECRETS.get(env, '')
+    token = os.getenv('ROBOT_TOKEN_' + env.upper())
+    secret = os.getenv('ROBOT_SECRET_' + env.upper())
 
     if not token:
         app.logger.error(ERROR_TOKEN_NOT_SET)
@@ -191,13 +192,13 @@ def hello():
     """
     首页路由，返回欢迎信息。
     """
-    return 'weclome to use prometheus alertmanager dingtalk webhook server!'
+    return 'welcome to use prometheus alert manager dingtalk webhook server!'
 
 
 @app.route('/hook/<env>', methods=['GET', 'POST'])
 def send_to_env(env):
     """
-    处理来自Prometheus Alertmanager的报警通知。
+    处理来自Prometheus Alert manager的报警通知。
 
     参数:
     - env: 报警环境，用于选择相应的机器人令牌和密钥。
@@ -211,12 +212,11 @@ def send_to_env(env):
             data = json.loads(post_data)
         except json.JSONDecodeError:
             abort(400, "Invalid JSON payload")
-
         app.logger.debug(post_data)
         send_alert(env, data)
         return 'Success', 200
     else:
-        return f'Welcome to use Prometheus Alertmanager Dingtalk webhook server! This URL is for {env.upper()} environment.', 200
+        return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! This URL is for {env.upper()} environment.', 200
 
 
 if __name__ == '__main__':
