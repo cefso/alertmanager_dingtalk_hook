@@ -216,7 +216,15 @@ def send_to_env(env):
         send_alert(env, data)
         return 'Success', 200
     else:
-        return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! This URL is for {env.upper()} environment.', 200
+        try:
+            token = os.getenv('ROBOT_TOKEN_' + env.upper())
+            secret = os.getenv('ROBOT_SECRET_' + env.upper())
+            if token is None or secret is None:
+                return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! This URL is for {env.upper()} environment. But env not set!', 200
+            else:
+                return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! This URL is for {env.upper()} environment.', 200
+        except Exception as e:
+            return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! We found an error for {env.upper()} environment: {e} ', 200
 
 
 if __name__ == '__main__':
