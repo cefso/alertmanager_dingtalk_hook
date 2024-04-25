@@ -133,29 +133,6 @@ def _mark_item(alert):
     return mark_item
 
 
-# def get_token_and_secret(env):
-#     """
-#     根据指定的环境获取相应的机器人令牌和密钥。
-#
-#     参数:
-#     - env: 字符串，指定环境，可以是'pre'（预发布环境）或'pro'（生产环境）。
-#
-#     返回值:
-#     - tuple: 包含机器人令牌和密钥的元组。若env为'pre'，返回ROBOT_TOKEN_PRE和ROBOT_SECRET_PRE；
-#              若env为'pro'，返回ROBOT_TOKEN_PRO和ROBOT_SECRET_PRO。
-#
-#     异常:
-#     - 如果指定的环境无效，会引发一个400错误，错误信息为"Invalid environment specified"。
-#     """
-#     if env == 'pre':
-#         return ROBOT_TOKEN_PRE, ROBOT_SECRET_PRE
-#     elif env == 'pro':
-#         return ROBOT_TOKEN_PRO, ROBOT_SECRET_PRO
-#     else:
-#         # 对于无效的环境参数，触发HTTP 400错误
-#         abort(400, "Invalid environment specified")
-
-
 def make_sign(timestamp, secret):
     """
     生成钉钉安全签名。
@@ -199,7 +176,6 @@ def check_token(env):
         else:
             # 环境变量设置正确，返回成功信息
             return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! This URL is for {env.upper()} environment.', 200
-
     except ValueError as ve:
         # 对于输入验证引发的异常，返回400状态码
         app.logger.error(f"Input validation error: {ve}")
@@ -240,7 +216,7 @@ def send_to_env(env):
         send_alert(env, data)
         return 'Success', 200
     else:
-        check_token(env)
+        return check_token(env)
 
 
 if __name__ == '__main__':
