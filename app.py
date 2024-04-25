@@ -187,6 +187,29 @@ def make_sign(timestamp, secret):
     return sign
 
 
+def check_token(env):
+    try:
+        # 通过os.getenv获取环境变量，考虑到敏感信息访问的安全性，此处保持不变
+        token = os.getenv('ROBOT_TOKEN_' + env.upper())
+        secret = os.getenv('ROBOT_SECRET_' + env.upper())
+
+        if token is None or secret is None:
+            # 当环境变量未设置时，使用400状态码反映Bad Request的情况
+            return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! This URL is for {env.upper()} environment. But env not set!', 400
+        else:
+            # 环境变量设置正确，返回成功信息
+            return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! This URL is for {env.upper()} environment.', 200
+
+    except ValueError as ve:
+        # 对于输入验证引发的异常，返回400状态码
+        app.logger.error(f"Input validation error: {ve}")
+        return f'Invalid input: {ve}', 400
+    except Exception as e:
+        # 对于预期内的其他异常，记录详细错误日志，并返回500状态码
+        app.logger.error(f"An error occurred: {e}")
+        return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! We found an error for {env.upper()} environment: {e}', 500
+
+
 @app.route('/', methods=['GET'])
 def hello():
     """
@@ -207,6 +230,7 @@ def send_to_env(env):
     - 根据请求方法返回不同的响应，GET请求返回欢迎信息，POST请求处理报警通知并返回成功信息。
     """
     if request.method == 'POST':
+        check_token(env)
         try:
             post_data = request.get_data()
             data = json.loads(post_data)
@@ -216,15 +240,7 @@ def send_to_env(env):
         send_alert(env, data)
         return 'Success', 200
     else:
-        try:
-            token = os.getenv('ROBOT_TOKEN_' + env.upper())
-            secret = os.getenv('ROBOT_SECRET_' + env.upper())
-            if token is None or secret is None:
-                return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! This URL is for {env.upper()} environment. But env not set!', 200
-            else:
-                return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! This URL is for {env.upper()} environment.', 200
-        except Exception as e:
-            return f'Welcome to use Prometheus Alert manager Dingtalk webhook server! We found an error for {env.upper()} environment: {e} ', 200
+        check_token(env)
 
 
 if __name__ == '__main__':
