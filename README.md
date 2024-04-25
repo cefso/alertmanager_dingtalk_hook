@@ -4,8 +4,11 @@ AlertManager 钉钉报警简单服务示例
 ## 运行
 ### 使用`Docker`运行
 ```shell
-$ docker run -p 5000:5000 --name -e ROBOT_TOKEN_PRO=<钉钉机器人TOKEN> -e ROBOT_SECRET_PRO=<钉钉机器人安全SECRET> -e LOG_LEVEL=debug -e EXTERNAL_URL=<alertmanager地址> dingtalk-hook -d registry.cn-hangzhou.aliyuncs.com/cefso/dingtalk-hook:0.1.0
+$ docker run -p 5000:5000 --name dingtalk-hook -e ROBOT_TOKEN_PRO=<钉钉机器人TOKEN> -e ROBOT_SECRET_PRO=<钉钉机器人安全SECRET> -e LOG_LEVEL=debug -e EXTERNAL_URL=<alertmanager地址>  -d registry.cn-hangzhou.aliyuncs.com/cefso/dingtalk-hook:0.1.2
 ```
+
+alert manager填写的webhook地址：`http://<host>:5000/hook/<env>`，其中`env`小写
+
 
 环境变量配置：
 
@@ -13,8 +16,7 @@ $ docker run -p 5000:5000 --name -e ROBOT_TOKEN_PRO=<钉钉机器人TOKEN> -e RO
 * ROBOT_SECRET_PRO：为钉钉机器人的安全设置密钥，机器人安全设置页面，加签一栏下面显示的 SEC 开头的字符串
 * EXTERNAL_URL：手动指定跳转后的 alert manager，方便查看所有告警，默认为空
 * LOG_LEVEL：日志级别，设置成 `debug` 可以看到 AlertManager WebHook 发送的数据，方便调试使用，不需调试可以不设置该环境变量
-
-![dingtalk secret](https://dingtalkdoc.oss-cn-beijing.aliyuncs.com/images/0.0.184/1572261283991-f8e35f4d-6997-4a02-9704-843ee8f97464.png)
+* 如果需要更多推送环境，可以添加环境变量 `ROBOT_TOKEN_<环境名称>` 和 `ROBOT_SECRET_<环境名称>`，环境名称为大写，则alert manager填写的webhook地址：`http://<host>:5000/hook/<env>`，其中`env`小写
 
 
 ### 在`Kubernetes`集群中运行
