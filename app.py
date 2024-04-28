@@ -61,44 +61,56 @@ def send_alert(env, data):
     url = 'https://oapi.dingtalk.com/robot/send?access_token=%s&timestamp=%d&sign=%s' % (
         token, timestamp, make_sign(timestamp, secret))
 
-    # 解析报警数据
-    status = data['status']
-    alerts = data['alerts']
-    alert_name = alerts[0]['labels']['alertname']
+    # 提取状态信息和报警列表
+    status = data.get('status')
+    alerts = data.get('alerts', [])
+    alert_dict = {}
 
-    # 根据报警状态构造发送的消息
-    if status == 'resolved':  # 如果报警恢复
-        send_data = {
-            "msgtype": "text",
-            "text": {
-                "content": "报警 %s 已恢复" % alert_name
+    # 遍历每个报警，组织按报警名分组
+    for alert in alerts:
+        try:
+            alert_name = alert['labels'].get('alertname')
+        except KeyError as e:
+            app.logger.error("Warning: Alert missing 'labels' or 'labels' missing 'alertname'. Skipping alert.")
+            continue
+
+        if alert_name is not None:
+            alert_dict.setdefault(alert_name, []).append(alert)
+
+    # 为每组报警生成markdown格式的消息
+    for alert_name, alerts_group in alert_dict.items():
+        alert_number = len(alerts_group)
+        title_firing = '**[%s]** 有 **%d** 条新的报警' % (alert_name, alert_number)
+        title_resolved = '**[%s]** 有 **%d** 条报警已经恢复' % (alert_name, alert_number)
+        # 生成报警列表的markdown文本，只包含前5条
+        alert_list = ''.join(_mark_item(alert) for alert in alerts_group[:5])
+
+        # 组装完整的markdown消息
+        if status == 'firing':
+            markdown_text = f"![](https://teamo-md.oss-cn-shanghai.aliyuncs.com/pod.png)\n{title_firing}\n{alert_list}\n[点击查看完整信息]({EXTERNAL_URL})"
+            send_data = {
+                "msgtype": "markdown",
+                "markdown": {
+                    "title": title_firing,
+                    "text": markdown_text
+                }
             }
-        }
-    else:
-        # 构造报警通知的markdown格式内容
-        title = '**[%s]** 有 **%d** 条新的报警' % (alert_name, len(alerts))
-
-        alert_list = ''
-        if len(alerts) <= 5:
-            for i in range(len(alerts)):
-                alert_list += _mark_item(alerts[i])
         else:
-            for i in range(5):
-                alert_list += _mark_item(alerts[i])
-        send_data = {
-            "msgtype": "markdown",
-            "markdown": {
-                "title": title,
-                "text": f"{title}\n![](https://teamo-md.oss-cn-shanghai.aliyuncs.com/pod.png)\n{alert_list}\n[点击查看完整信息]({EXTERNAL_URL})"
+            markdown_text = f"![](https://teamo-md.oss-cn-shanghai.aliyuncs.com/pod.png)\n{title_resolved}\n{alert_list}\n[点击查看完整信息]({EXTERNAL_URL})"
+            send_data = {
+                "msgtype": "markdown",
+                "markdown": {
+                    "title": title_resolved,
+                    "text": markdown_text
+                }
             }
-        }
 
-    # 发送消息到钉钉
-    req = requests.post(url, json=send_data)
-    result = req.json()
-    # 检查发送结果
-    if result['errcode'] != 0:
-        app.logger.error('notify dingtalk error: %s' % result['errcode'])
+        # 发送消息到钉钉
+        req = requests.post(url, json=send_data)
+        result = req.json()
+        # 检查发送结果
+        if result['errcode'] != 0:
+            app.logger.error('notify dingtalk error: %s' % result['errcode'])
 
 
 def _mark_item(alert):
@@ -120,13 +132,12 @@ def _mark_item(alert):
         if not isinstance(summary, str) or not isinstance(description, str):
             raise ValueError("summary和description必须是字符串类型")
     except KeyError as e:
-        app.logger.error(f"缺少必要的键: {e}")
-        return ""
+        app.logger.error(f"缺少必要的键: {e}", exc_info=True)
+        return "处理报警信息时发生错误"
     except ValueError as e:
-        app.logger.error(e)
-        return ""
+        app.logger.error(f"数据类型错误: {e}", exc_info=True)
+        return "处理报警信息时发生错误"
 
-    # 构造markdown格式的报警信息
     annotations = f"> 总结: {summary}\n\n> 描述: {description}"
 
     if 'job' in labels:
