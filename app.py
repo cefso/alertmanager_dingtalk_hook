@@ -44,6 +44,10 @@ def send_alert(env, data):
     # secret = ROBOT_SECRETS.get(env, '')
     token = os.getenv('ROBOT_TOKEN_' + env.upper())
     secret = os.getenv('ROBOT_SECRET_' + env.upper())
+    # 获取external url
+    global EXTERNAL_URL
+    if not EXTERNAL_URL:
+        EXTERNAL_URL = data['externalURL']
 
     if not token:
         app.logger.error(ERROR_TOKEN_NOT_SET)

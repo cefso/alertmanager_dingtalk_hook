@@ -39,7 +39,7 @@ alert manager填写的webhook地址：`http://<host>:5000/hook/<env>`，其中`e
 
 * ROBOT_TOKEN_PRO：钉钉机器人 TOKEN
 * ROBOT_SECRET_PRO：为钉钉机器人的安全设置密钥，机器人安全设置页面，加签一栏下面显示的 SEC 开头的字符串
-* EXTERNAL_URL：手动指定跳转后的 alert manager，方便查看所有告警，默认为空
+* EXTERNAL_URL：手动指定跳转后的 alert manager，方便查看所有告警，默认为alertmanager消息中的地址
 * LOG_LEVEL：日志级别，设置成 `debug` 可以看到 AlertManager WebHook 发送的数据，方便调试使用，不需调试可以不设置该环境变量
 * 如果需要更多推送环境，可以添加环境变量 `ROBOT_TOKEN_<环境名称>` 和 `ROBOT_SECRET_<环境名称>`，环境名称为大写，则alert manager填写的webhook地址：`http://<host>:5000/hook/<env>`，其中`env`小写
 
