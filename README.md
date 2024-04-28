@@ -1,10 +1,35 @@
 # alertmanager-dingtalk-hook 
 AlertManager 钉钉报警简单服务示例
 
+
+## 使用
+
+### 基础使用
+
+默认情况下访问地址为`http://<host>:5000/hook/<env>`，其中`env`小写, helm下默认为`pro`且必须存在
+
+当使用`GET`方法进行请求时，会返回这个环境的检查情况，可以用来识别对应环境的环境变量是否配置成功
+
+当使用`POST`方法进行请求时，会正常转发alertmanager的消息到对应钉钉机器人
+
+### 高级使用
+
+如果需要更多推送环境，可以添加环境变量 `ROBOT_TOKEN_<环境名称>` 和 `ROBOT_SECRET_<环境名称>`，环境名称为大写，则alert manager填写的webhook地址：`http://<host>:5000/hook/<env>`，其中`env`小写
+
+例如：
+
+如果添加了
+```shell
+ROBOT_TOKEN_PRE=<钉钉机器人TOKEN>
+ROBOT_SECRET_PRE=<钉钉机器人安全SECRET>
+```
+则可以通过url`http://<host>:5000/hook/pre` 推送到上面`token`配置的钉钉机器人
+
+
 ## 运行
 ### 使用`Docker`运行
 ```shell
-$ docker run -p 5000:5000 --name dingtalk-hook -e ROBOT_TOKEN_PRO=<钉钉机器人TOKEN> -e ROBOT_SECRET_PRO=<钉钉机器人安全SECRET> -e LOG_LEVEL=debug -e EXTERNAL_URL=<alertmanager地址>  -d registry.cn-hangzhou.aliyuncs.com/cefso/dingtalk-hook:0.1.2
+docker run -p 5000:5000 --name dingtalk-hook -e ROBOT_TOKEN_PRO=<钉钉机器人TOKEN> -e ROBOT_SECRET_PRO=<钉钉机器人安全SECRET> -e LOG_LEVEL=debug -e EXTERNAL_URL=<alertmanager地址>  -d registry.cn-hangzhou.aliyuncs.com/cefso/dingtalk-hook:0.1.2
 ```
 
 alert manager填写的webhook地址：`http://<host>:5000/hook/<env>`，其中`env`小写
@@ -20,91 +45,22 @@ alert manager填写的webhook地址：`http://<host>:5000/hook/<env>`，其中`e
 
 
 ### 在`Kubernetes`集群中运行
-第一步建议将钉钉机器人TOKEN创建成`Secret`资源对象：
+现在已经支持使用`helm`进行部署了，使用上更加方便：
+
+添加`helm`仓库：
+
 ```shell
-$ kubectl create secret generic dingtalk-secret --from-literal=token=<钉钉群聊的机器人TOKEN> --from-literal=secret=<钉钉群聊机器人的SECRET> -n kube-ops
-secret "dingtalk-secret" created
+helm repo add cefso  https://cefso.github.io/helm-chart
 ```
+提取valuse模板，进行编辑（必须，需要自行配置钉钉机器人相关`token`）：
 
-然后定义`Deployment`和`Service`资源对象：(dingtalk-hook.yaml)
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: dingtalk-hook
-  namespace: kube-ops
-spec:
-  selector:
-    matchLabels:
-      app: dingtalk-hook
-  template:
-    metadata:
-      labels:
-        app: dingtalk-hook
-    spec:
-      containers:
-      - name: dingtalk-hook
-        image: cnych/alertmanager-dingtalk-hook:v0.3.6
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 5000
-          name: http
-        env:
-        - name: PROME_URL
-          value: prometheus.local
-        - name: LOG_LEVEL
-          value: debug
-        - name: ROBOT_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: dingtalk-secret
-              key: token
-        - name: ROBOT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: dingtalk-secret
-              key: secret
-        resources:
-          requests:
-            cpu: 50m
-            memory: 100Mi
-          limits:
-            cpu: 50m
-            memory: 100Mi
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: dingtalk-hook
-  namespace: kube-ops
-spec:
-  selector:
-    app: dingtalk-hook
-  ports:
-  - name: hook
-    port: 5000
-    targetPort: http
-```
-
-直接创建上面的资源对象即可：
 ```shell
-$ kubectl create -f dingtalk-hook.yaml
-deployment.apps "dingtalk-hook" created
-service "dingtalk-hook" created
-$ kubectl get pods -n kube-ops
-NAME                            READY     STATUS      RESTARTS   AGE
-dingtalk-hook-c4fcd8cd6-6r2b6   1/1       Running     0          45m
-......
+helm show values cefso/alertmanager-dingtalk-hook > dingtalk-hook-values.yaml
 ```
 
-最后在`AlertManager`中 webhook 地址直接通过 DNS 形式访问即可：
-```yaml
-receivers:
-- name: 'webhook'
-  webhook_configs:
-  - url: 'http://dingtalk-hook.kube-ops.svc.cluster.local:5000'
-    send_resolved: true
+安装dingtalk-hook
+```shell
+helm install dingtalk-hook cefso/alertmanager-dingtalk-hook -f dingtalk-hook-values.yaml -n monitoring
 ```
 
 ## 参考文档
