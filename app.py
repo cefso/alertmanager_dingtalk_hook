@@ -82,12 +82,15 @@ def send_alert(env, data):
         alert_number = len(alerts_group)
         title_firing = '**[%s]** 有 **%d** 条新的报警' % (alert_name, alert_number)
         title_resolved = '**[%s]** 有 **%d** 条报警已经恢复' % (alert_name, alert_number)
+        # 为告警生成banner图
+        warning_banner_url = f"https://teamo-md.oss-cn-shanghai.aliyuncs.com/alert/warn-r.png"
+        resolved_banner_url = f"https://teamo-md.oss-cn-shanghai.aliyuncs.com/alert/resolved-r.png"
         # 生成报警列表的markdown文本，只包含前5条
         alert_list = ''.join(_mark_item(alert) for alert in alerts_group[:5])
 
         # 组装完整的markdown消息
         if status == 'firing':
-            markdown_text = f"![](https://teamo-md.oss-cn-shanghai.aliyuncs.com/pod.png)\n{title_firing}\n{alert_list}\n[点击查看完整信息]({EXTERNAL_URL})"
+            markdown_text = f"![]({warning_banner_url})\n{title_firing}\n{alert_list}\n[点击查看完整信息]({EXTERNAL_URL})"
             send_data = {
                 "msgtype": "markdown",
                 "markdown": {
@@ -96,7 +99,7 @@ def send_alert(env, data):
                 }
             }
         else:
-            markdown_text = f"![](https://teamo-md.oss-cn-shanghai.aliyuncs.com/pod.png)\n{title_resolved}\n{alert_list}\n[点击查看完整信息]({EXTERNAL_URL})"
+            markdown_text = f"![]({resolved_banner_url})\n{title_resolved}\n{alert_list}\n[点击查看完整信息]({EXTERNAL_URL})"
             send_data = {
                 "msgtype": "markdown",
                 "markdown": {
@@ -126,11 +129,13 @@ def _mark_item(alert):
     try:
         labels = alert.get('labels', {})
         annotations_data = alert.get('annotations', {})
-        # 确保 'summary' 和 'description' 是字符串类型
-        summary = annotations_data.get('summary', '').strip()
-        description = annotations_data.get('description', '').strip()
-        if not isinstance(summary, str) or not isinstance(description, str):
-            raise ValueError("summary和description必须是字符串类型")
+
+        # 确保 'summary' 和 'description' 是非空字符串类型
+        summary = str(annotations_data.get('summary', '')).strip()
+        description = str(annotations_data.get('description', '')).strip()
+
+        if not isinstance(summary, str) or not isinstance(description, str) or not summary or not description:
+            raise ValueError("summary和description必须是非空字符串类型")
     except KeyError as e:
         app.logger.error(f"缺少必要的键: {e}", exc_info=True)
         return "处理报警信息时发生错误"
@@ -138,12 +143,24 @@ def _mark_item(alert):
         app.logger.error(f"数据类型错误: {e}", exc_info=True)
         return "处理报警信息时发生错误"
 
-    annotations = f"> 总结: {summary}\n\n> 描述: {description}"
+    annotations = f"> 摘要: {summary}\n\n> 描述: {description}\n---\n"
+    mark_item = ''
 
-    if 'job' in labels:
-        mark_item = f"\n> job: {labels['job']}\n\n{annotations}\n---\n"
-    else:
-        mark_item = annotations + '\n'
+    # 使用字典映射来优化性能和可读性
+    label_format_map = {
+        'job': "\n> Job: {value}\n\n",
+        'namespace': "\n> Namespace: {value}\n\n",
+        'pod': "\n> Pod: {value}\n\n",
+        'service': "\n> Service: {value}\n\n",
+        'status': "\n> Status: {value}\n\n"
+    }
+
+    for key, value in labels.items():
+        format_string = label_format_map.get(key)
+        if format_string:
+            mark_item += format_string.format(value=value)
+
+    mark_item += annotations
 
     return mark_item
 
