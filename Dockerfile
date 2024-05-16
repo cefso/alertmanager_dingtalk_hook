@@ -4,6 +4,7 @@ WORKDIR /src
 
 # add app
 COPY app.py /src
+COPY web /src/web
 COPY requirements.txt /src
 
 # install requirements
