@@ -2,8 +2,8 @@ import json
 
 from flask import Blueprint, request, current_app, abort
 
-from web.dingtalk.service import check_token, send_alert
 from web import siwa
+from web.dingtalk.service import check_token, send_alert
 
 bp = Blueprint('dingtalk', __name__, url_prefix='/dingtalk')
 

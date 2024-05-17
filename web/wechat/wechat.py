@@ -2,8 +2,8 @@ import json
 
 from flask import Blueprint, request, current_app, abort
 
-from web.wechat.service import check_token, send_alert
 from web import siwa
+from web.wechat.service import check_token, send_alert
 
 bp = Blueprint('wechat', __name__, url_prefix='/wechat')
 

@@ -1,8 +1,7 @@
-from flask import current_app
 import os
-import time
 
 import requests
+from flask import current_app
 
 # 环境变量配置
 EXTERNAL_URL = os.getenv('EXTERNAL_URL', '')
@@ -34,8 +33,7 @@ def send_alert(env, data):
         return
 
     # 构造钉钉消息的URL
-    timestamp = int(round(time.time() * 1000))
-    url = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s' % (key)
+    url = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s' % key
 
     # 提取状态信息和报警列表
     status = data.get('status')
@@ -58,9 +56,6 @@ def send_alert(env, data):
         alert_number = len(alerts_group)
         title_firing = '**[%s]** 有 **%d** 条新的报警' % (alert_name, alert_number)
         title_resolved = '**[%s]** 有 **%d** 条报警已经恢复' % (alert_name, alert_number)
-        # 为告警生成banner图
-        warning_banner_url = f"https://teamo-md.oss-cn-shanghai.aliyuncs.com/alert/warn-r.png"
-        resolved_banner_url = f"https://teamo-md.oss-cn-shanghai.aliyuncs.com/alert/resolved-r.png"
         # 生成报警列表的markdown文本，只包含前5条
         alert_list = ''.join(_mark_item(alert) for alert in alerts_group[:5])
 

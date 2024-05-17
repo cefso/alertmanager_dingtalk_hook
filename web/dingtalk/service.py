@@ -1,12 +1,12 @@
 import base64
 import hashlib
-from flask import current_app
 import hmac
 import os
 import time
 import urllib.parse
 
 import requests
+from flask import current_app
 
 # 环境变量配置
 # ROBOT_TOKENS = {'pro': os.getenv('ROBOT_TOKEN_PRO')}
