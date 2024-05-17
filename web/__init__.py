@@ -56,7 +56,8 @@ def create_app(test_config=None):
     # outgoing.init_app(app)
     # user.init_app(app)
     # cms.init_app(app)
-    from . import dingtalk
+    from . import dingtalk, wechat
     dingtalk.init_app(app)
+    wechat.init_app(app)
 
     return app
